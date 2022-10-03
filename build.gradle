@@ -1,0 +1,86 @@
+import nu.studer.gradle.jooq.JooqEdition
+
+plugins {
+	id 'org.springframework.boot' version '2.7.4'
+	id 'io.spring.dependency-management' version '1.0.14.RELEASE'
+	id 'java'
+	id 'nu.studer.jooq' version '7.0'
+}
+
+group = 'rlouol.example'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+
+	runtimeOnly 'mysql:mysql-connector-java:8.0.30'
+	jooqGenerator('mysql:mysql-connector-java:8.0.30')
+	jooqGenerator("jakarta.xml.bind:jakarta.xml.bind-api:3.0.1")
+}
+
+test {
+	useJUnitPlatform()
+}
+
+jooq {
+	// 계속 3.4.0 버전의 jooq 라이브러리를 가져오는 이슈가 있음. 그래서 강제로 버전 설정함.
+	version = '3.16.10'
+	edition = JooqEdition.OSS
+
+	configurations {
+		main {
+			generateSchemaSourceOnCompilation = true
+
+			generationTool {
+
+				logging = org.jooq.meta.jaxb.Logging.WARN
+
+				jdbc {
+					driver = 'com.mysql.cj.jdbc.Driver'
+					url = 'jdbc:mysql://localhost:3306'
+					user = 'root'
+					password = 'root'
+				}
+
+				generator {
+					name = 'org.jooq.codegen.DefaultGenerator'
+					strategy {
+						// org.jooq.codegen.KeepNamesGeneratorStrategy - DB 네이밍 유지: 언더바, 대소문자 등... 기본값은 PascalCaseNames
+						name = 'org.jooq.codegen.DefaultGeneratorStrategy'
+					}
+					database {
+						name = 'org.jooq.meta.mysql.MySQLDatabase'
+						inputSchema = 'mycompany'
+
+						includes = '.*' // 정규표현식
+						excludes = 'test_.* | temp_.*'
+					}
+					generate {
+						generatedSerialVersionUID = 'CONSTANT'
+						javaTimeTypes = true    // java.time.*
+
+						deprecated = false
+						records = true
+						immutablePojos = true
+						fluentSetters = true
+					}
+					target {
+						// packageName = 'nu.studer.sample'
+						packageName = 'rlouol.example.jooqexample'
+						directory = 'build/generated-src/jooq/main'  // default (can be omitted)
+					}
+				}
+			}
+		}
+	}
+}
